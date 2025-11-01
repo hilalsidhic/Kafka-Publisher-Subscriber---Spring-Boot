@@ -1,10 +1,14 @@
 # Spring Boot Kafka Producer/Consumer Demo
 
-This is a simple Spring Boot project that demonstrates a complete, working example of an Apache Kafka producer and consumer.
+This is a simple Spring Boot project that demonstrates a complete, working example of an Apache Kafka producer and consumer using a multi-module Gradle setup.
+
+The application is structured as two modules:
+- **producer/**: Spring Boot Kafka producer exposing REST endpoints.
+- **consumer/**: Spring Boot Kafka consumer with multiple listener examples.
 
 The application is configured to:
-1.  **Produce** messages to a Kafka topic (e.g., using a REST API endpoint).
-2.  **Consume** messages from a Kafka topic using `@KafkaListener`.
+1.  **Produce** messages to a Kafka topic (via a REST API endpoint in the producer module).
+2.  **Consume** messages from a Kafka topic using `@KafkaListener` in the consumer module.
 3.  Includes an example of a consumer listening to a **specific partition**.
 
 ## ✨ Features
@@ -20,6 +24,7 @@ The application is configured to:
 * **Messaging:** Spring for Apache Kafka
 * **Infrastructure:** Apache Kafka & Zookeeper
 * **Containerization:** Docker Compose
+* **Build Tool:** Gradle (see `producer/` and `consumer/` for individual builds)
 
 ## 🏁 Getting Started
 
@@ -28,8 +33,8 @@ Follow these steps to get the entire application running on your local machine.
 ### Prerequisites
 
 * **Docker & Docker Compose:** Required to run the Kafka cluster.
-* **JDK 17** (or newer): Required to run the Spring Boot application.
-* **Maven:** Required to build and run the application.
+* **JDK 17** (or newer): Required to run the Spring Boot applications.
+* **Gradle:** Required to build and run the applications (or use the included `gradlew` wrapper scripts).
 
 ### Step 1: Start the Kafka Cluster
 
@@ -40,16 +45,33 @@ First, start the Kafka and Zookeeper containers using the provided Docker Compos
 docker-compose up -d
 ```
 
-### Step 2: Run the Spring Boot Application
+### Step 2: Build the Applications
 
-Once the Kafka broker is running, you can start the Spring Boot application.
+Build both modules using Gradle (from the root directory):
 
 ```bash
-# This will build the project and start the server
-mvn spring-boot:run
+# On Windows
+cd producer && gradlew build && cd ../consumer && gradlew build
+# Or using the Gradle wrapper from each module
 ```
 
-The application will start and the `@KafkaListener` will connect to the Kafka broker.
+### Step 3: Run the Producer and Consumer
+
+Open two terminals:
+
+**Terminal 1: Start the Consumer**
+```bash
+cd consumer
+./gradlew bootRun
+```
+
+**Terminal 2: Start the Producer**
+```bash
+cd producer
+./gradlew bootRun
+```
+
+The consumer must be running before you send messages from the producer.
 
 ## 🚀 How to Use
 
@@ -57,7 +79,7 @@ You can test the producer and consumer using any API client (like `curl` or Post
 
 ### 1. Send a Message (Producer)
 
-This project likely exposes a simple REST endpoint to send messages. (Assuming an endpoint like `/send`):
+The producer exposes a REST endpoint to send messages. Example (adjust if your controller uses a different path):
 
 ```bash
 # Send a message to the 'dummyTopic'
@@ -68,7 +90,7 @@ curl -X POST "http://localhost:8080/send?topic=dummyTopic&message=hello-partitio
 
 ### 2. Check the Console (Consumer)
 
-Watch the console output of your running Spring Boot application. The `@KafkaListener` that is assigned to that topic's partition will activate and print the message.
+Watch the console output of your running consumer application. The `@KafkaListener` that is assigned to that topic's partition will activate and print the message.
 
 ```
 Received message from partition 1: hello-partition-1
@@ -76,7 +98,12 @@ Received message from partition 1: hello-partition-1
 
 ## ⚙️ Key Configuration (`application.properties`)
 
-All application settings are in `src/main/resources/application.properties`.
+All application settings are in each module's `src/main/resources/application.properties`.
+
+**Producer:** `producer/src/main/resources/application.properties`
+**Consumer:** `consumer/src/main/resources/application.properties`
+
+Example configuration (consumer):
 
 ```properties
 # ---------------------------------
@@ -98,24 +125,21 @@ spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.Str
 # ---------------------------------
 # Kafka Consumer Properties
 # ---------------------------------
-# This is the default group ID for @KafkaListener (can be overridden)
 spring.kafka.consumer.group-id=my-general-group
 spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
 spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
-# Ensures new groups read from the beginning of the topic
 spring.kafka.consumer.auto-offset-reset=earliest
 
 # ---------------------------------
 # Custom Application Properties
 # ---------------------------------
-# Used to inject topic/group names into @KafkaListener
 kafka.consumer.topic.name=dummyTopic
 notification.consumer.group-id=notification-group
 ```
 
 ## 📄 Kafka Listeners (`@KafkaListener` Examples)
 
-This project demonstrates two types of consumers:
+This project demonstrates two types of consumers (see `consumer/src/main/java/com/kafka/consumer/service/`):
 
 ### 1. Standard (Group-Managed) Consumer
 
@@ -143,3 +167,19 @@ public void listenToPartitionOne(String message) {
     System.out.println("Received message from partition 1: " + message);
 }
 ```
+
+## 🧪 Testing
+
+You can run tests for each module:
+
+```bash
+cd producer
+./gradlew test
+
+cd ../consumer
+./gradlew test
+```
+
+---
+
+For any issues, check the logs in each module or review the configuration files. Make sure Kafka and Zookeeper are running before starting the applications.
